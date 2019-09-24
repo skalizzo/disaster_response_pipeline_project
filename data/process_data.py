@@ -1,5 +1,4 @@
 import sys
-import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -16,15 +15,33 @@ def load_data(messages_filepath:str, categories_filepath:str)->pd.DataFrame:
 
 
 
-def clean_data(df):
+def clean_data(df:pd.DataFrame)->pd.DataFrame:
+    """
+    data wrangling: splits categories into usable columns, drops duplicates
+    :param df: pd.DataFrame with messages and categories combined
+    :return: pd.DataFrame (cleaned)
+    """
     categories = df['categories'].str.split(';', expand=True)
     row = categories.iloc[0]
     category_colnames = row.apply(lambda x: x[:-2]).tolist()
     categories.columns = category_colnames
+    for column in categories:
+        categories[column] = categories[column].str[-1:]
+        categories[column] = pd.to_numeric(categories[column])
+    df.drop('categories', axis=1, inplace=True)
+    df = pd.concat([df, categories], axis=1)
+    df.drop_duplicates(keep='first', inplace=True)
+    return df
 
-
-def save_data(df, database_filename):
-    pass  
+def save_data(df:pd.DataFrame, database_filename:str):
+    """
+    saves data to an sqlite database
+    :param df: data as pd.DataFrame
+    :param database_filename: filename for the database (string)
+    :return:
+    """
+    engine = create_engine(f'sqlite:///{database_filename}')
+    df.to_sql('messages', engine, index=False)
 
 
 def main():
