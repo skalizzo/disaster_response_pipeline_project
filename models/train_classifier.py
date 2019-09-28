@@ -1,24 +1,98 @@
 import sys
+import nltk
+nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
+
+import pandas as pd
+import re
+import numpy as np
+import pickle
+from sqlalchemy import create_engine
+
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.multioutput import MultiOutputClassifier
 
 
-def load_data(database_filepath):
-    pass
+def load_data(database_filepath:str):
+    """
+    loads the data from the database in the given filepath
+    :param database_filepath:
+    :return: X (np.array), y (np.array), target category_names (list)
+    """
+    engine = create_engine(f'sqlite:///{database_filepath}')
+    df = pd.read_sql(sql='SELECT * FROM messages;', con=engine)
+    X = df['message'].values
+    y = df.drop(['id', 'message', 'original', 'genre'], axis=1).values
+    category_names = df.drop(['id','message','original','genre'], axis=1).columns
+    return X, y, category_names
 
+def tokenize(text)->[]:
+    """
+    turns a given text into tokens using a word-tokenizer and a lemmatizer;
+    replaces URLs with a placeholder
+    :param text:
+    :return: clean_tokens (list)
+    """
+    url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    detected_urls = re.findall(url_regex, text)
+    for url in detected_urls:
+        text = text.replace(url, "urlplaceholder")
 
-def tokenize(text):
-    pass
+    tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
+
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
+
+    return clean_tokens
 
 
 def build_model():
-    pass
+    """
+    building a pipeline for Natural Language Processing with a Multioutputclassifier
+    :return: Pipeline
+    """
+    pipeline = Pipeline([
+        ('vect', CountVectorizer(tokenizer=tokenize)),
+        ('tfidf', TfidfTransformer()),
+        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+    ])
+    return pipeline
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    """
+    prints a classification report for each category of the model
+    :param model:
+    :param X_test:
+    :param Y_test:
+    :param category_names:
+    :return:
+    """
+    y_pred = model.predict(X_test)
+    for colnr in range(y_pred.shape[1]):
+        print(category_names[colnr], '--------------------------------------')
+        print(classification_report(Y_test[:, colnr], y_pred[:, colnr]))
 
 
 def save_model(model, model_filepath):
-    pass
+    """
+    saves model as pickle file to given filepath
+    :param model: model that should be saved
+    :param model_filepath: path where the file should be saved
+    :return:
+    """
+    pickle._dump(model, open(model_filepath, "wb"))
 
 
 def main():
