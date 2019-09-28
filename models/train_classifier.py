@@ -11,12 +11,12 @@ from sqlalchemy import create_engine
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.base import BaseEstimator, TransformerMixin
+#from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.multioutput import MultiOutputClassifier
 
@@ -67,7 +67,16 @@ def build_model():
         ('tfidf', TfidfTransformer()),
         ('clf', MultiOutputClassifier(RandomForestClassifier()))
     ])
-    return pipeline
+    #only a few parameters active to make GridSearch faster for the review
+    parameters = {
+        'vect__ngram_range': ((1, 1), (1, 2)),
+        # 'vect__max_df': (0.5, 0.75, 1.0),
+        # 'vect__max_features': (None, 5000, 10000),
+        'tfidf__use_idf': (True, False),
+        # 'clf__estimator__n_estimators': [50, 100, 200],
+    }
+    model = GridSearchCV(pipeline, param_grid=parameters)
+    return model
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
