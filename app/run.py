@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Histogram
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -29,6 +29,7 @@ def tokenize(text):
 engine = create_engine('sqlite:///../data/DisasterResponse.db')
 df = pd.read_sql_table('messages', engine)
 
+
 # load model
 model = joblib.load("../models/classifier.pkl")
 
@@ -37,14 +38,28 @@ model = joblib.load("../models/classifier.pkl")
 @app.route('/')
 @app.route('/index')
 def index():
-    
     # extract data needed for visuals
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
+
+    cat_p = df[df.columns[4:]].sum() / len(df)  # proportion based on\
+    # categories
+    cat_p = cat_p.sort_values(ascending=False)  # largest bar will be\
+    # on left
+    cats = list(cat_p.index)  # category names
+
+    #proportion of categories
+    category_counts = df[df.columns[4:]].sum() / len(df)
+    category_counts.sort_values(ascending=False, inplace=True)
+    category_names = list(category_counts.index)
+
+    df['avg_categories'] = df[df.columns[4:]].sum(axis=1)
+
+
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
+
     graphs = [
         {
             'data': [
@@ -63,13 +78,50 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+
+        {
+            'data': [
+                Bar(
+                    x=category_names,
+                    y=category_counts
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Categories',
+                'yaxis': {
+                    'title': "Proportion"
+                },
+                'xaxis': {
+                    'title': "Categories"
+                }
+            }
+        },
+
+        {
+            'data': [
+                Histogram(
+                    x=df['avg_categories'],
+                )
+            ],
+
+            'layout': {
+                'title': 'Number of Categories per message',
+                'yaxis': {
+                    'title': "Number of messages"
+                },
+                'xaxis': {
+                    'title': "Categories"
+                }
+            }
         }
     ]
-    
+
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
