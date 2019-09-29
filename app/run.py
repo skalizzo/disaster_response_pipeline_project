@@ -39,15 +39,8 @@ model = joblib.load("../models/classifier.pkl")
 @app.route('/index')
 def index():
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-
-    cat_p = df[df.columns[4:]].sum() / len(df)  # proportion based on\
-    # categories
-    cat_p = cat_p.sort_values(ascending=False)  # largest bar will be\
-    # on left
-    cats = list(cat_p.index)  # category names
 
     #proportion of categories
     category_counts = df[df.columns[4:]].sum() / len(df)
@@ -56,10 +49,7 @@ def index():
 
     df['avg_categories'] = df[df.columns[4:]].sum(axis=1)
 
-
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
-
     graphs = [
         {
             'data': [
