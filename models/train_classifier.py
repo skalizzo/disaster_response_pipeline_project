@@ -62,26 +62,29 @@ def build_model():
     building a pipeline for Natural Language Processing with a Multioutputclassifier
     :return: Pipeline
     """
+    #RandomForestClassifier limited to max-depth=2 to make the program run faster
+    # -->should use a higher parameter in production
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
         ('tfidf', TfidfTransformer()),
-        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+        ('clf', MultiOutputClassifier(RandomForestClassifier(max_depth=2)))
     ])
     #only a few parameters active to make GridSearch faster for the review
     parameters = {
-        'vect__ngram_range': ((1, 1), (1, 2)),
-        # 'vect__max_df': (0.5, 0.75, 1.0),
+        #'vect__ngram_range': ((1, 1), (1, 2)),
+        #'vect__max_df': (0.5, 0.75, 1.0),
         # 'vect__max_features': (None, 5000, 10000),
-        'tfidf__use_idf': (True, False),
-        # 'clf__estimator__n_estimators': [50, 100, 200],
+        #'tfidf__use_idf': (True, False),
+        'clf__estimator__n_estimators': [10, 50],
     }
-    model = GridSearchCV(pipeline, param_grid=parameters)
+    model = GridSearchCV(pipeline, param_grid=parameters, verbose=3)
     return model
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
     """
-    prints a classification report for each category of the model
+    prints a classification report including the precision, recall, F1 Score and accuracy
+    for each category of the model
     :param model:
     :param X_test:
     :param Y_test:
@@ -89,9 +92,16 @@ def evaluate_model(model, X_test, Y_test, category_names):
     :return:
     """
     y_pred = model.predict(X_test)
+
     for colnr in range(y_pred.shape[1]):
-        print(category_names[colnr], '--------------------------------------')
-        print(classification_report(Y_test[:, colnr], y_pred[:, colnr]))
+        print(category_names[colnr], '(weighted avg)--------------------------------------')
+        print('Accuracy: {}'.format(np.mean(Y_test[:, colnr] == y_pred[:, colnr])))
+        reportDict = classification_report(Y_test[:, colnr], y_pred[:, colnr], output_dict=True)
+        weighted = reportDict['weighted avg']
+        for key, value in weighted.items():
+            print(f"{key}: {value}")
+
+
 
 
 def save_model(model, model_filepath):
