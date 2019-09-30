@@ -94,12 +94,13 @@ def evaluate_model(model, X_test, Y_test, category_names):
     y_pred = model.predict(X_test)
 
     for colnr in range(y_pred.shape[1]):
-        print(category_names[colnr], '(weighted avg)--------------------------------------')
+        print('Category: ', category_names[colnr], '(weighted avg)--------------------------------------')
         print('Accuracy: {}'.format(np.mean(Y_test[:, colnr] == y_pred[:, colnr])))
         reportDict = classification_report(Y_test[:, colnr], y_pred[:, colnr], output_dict=True)
         weighted = reportDict['weighted avg']
         for key, value in weighted.items():
             print(f"{key}: {value}")
+        print('------------------------------------------------')
 
 
 
